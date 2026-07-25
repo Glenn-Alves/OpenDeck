@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import OnlineCount from "./OnlineCount";
+import ThemeToggle from "./ThemeToggle";
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -8,7 +9,7 @@ export default async function Navbar() {
   const user = data.user;
 
   return (
-    <header className="border-b-2 border-ink">
+    <header className="border-b-2 border-border">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link
           href="/"
@@ -38,6 +39,7 @@ export default async function Navbar() {
 
         <div className="flex items-center gap-3">
           <OnlineCount />
+          <ThemeToggle />
         {user ? (
             <Link
               href="/profile"

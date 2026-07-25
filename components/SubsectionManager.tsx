@@ -84,7 +84,7 @@ export default function SubsectionManager({
       ) : (
         isOwner && (
           <p className="text-sm text-muted mb-4">
-            No subsections yet — use these to group related decks together, like folders.
+            Use these to group related decks together, like folders.
           </p>
         )
       )}

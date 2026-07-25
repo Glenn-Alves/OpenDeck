@@ -194,8 +194,7 @@ export default function ProfilePage() {
               <Link
                 key={item.id}
                 href={`/deck/${item.deckId}`}
-                className="block bg-card border border-ink/10 rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring"
-              >
+className="block bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring"              >
                 <p className="text-sm text-ink">
                   <strong>{item.authorName}</strong>{" "}
                   {item.type === "comment" ? "commented on" : "rated"}{" "}
@@ -220,8 +219,7 @@ export default function ProfilePage() {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New password (at least 8 characters)"
-            className="w-full bg-card border-2 border-ink rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"
-          />
+className="w-full bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"          />
           {passwordError && <p className="text-xs text-margin">{passwordError}</p>}
           {passwordSuccess && (
             <p className="text-xs text-rule">Password updated.</p>

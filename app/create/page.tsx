@@ -269,8 +269,7 @@ const formData = new FormData();
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="The Count of Monte Cristo"
-            className="w-full bg-card border-2 border-ink rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
-          />
+className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"          />
         </div>
 
         <div>
@@ -294,8 +293,7 @@ const formData = new FormData();
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="historical, classic, literature"
-            className="w-full bg-card border-2 border-ink rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
-          />
+className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"          />
           <p className="text-xs text-muted mt-1.5">Separate tags with commas.</p>
         </div>
 
@@ -310,10 +308,10 @@ const formData = new FormData();
         type="button"
         onClick={() => setDifficulty(level)}
         className={`px-4 py-2 rounded-sm text-sm font-medium border-2 transition-colors focus-ring ${
-          difficulty === level
-            ? "bg-ink text-paper border-ink"
-            : "bg-card text-muted border-ink/25 hover:border-ink/50"
-        }`}
+  difficulty === level
+    ? "bg-ink text-paper border-ink"
+    : "bg-card text-muted border-border hover:border-ink/50"
+}`}
       >
         {level}
       </button>
@@ -321,7 +319,7 @@ const formData = new FormData();
   </div>
 </div>
 
-        <div className="border-2 border-dashed border-ink/25 rounded-sm p-6 text-center">
+        <div className="border-2 border-dashed border-border rounded-sm p-6 text-center">
           <p className="text-sm text-ink font-medium mb-1">
             Import cards from Anki
           </p>
@@ -356,7 +354,7 @@ const formData = new FormData();
             {cards.map((card, i) => (
               <div
                 key={i}
-                className="bg-card border border-ink/10 rounded-sm p-4 grid grid-cols-1 md:grid-cols-2 gap-4 relative"
+                className="bg-card border border-border rounded-sm p-4 grid grid-cols-1 md:grid-cols-2 gap-4 relative"
               >
                 <div>
                   <ExpandableField

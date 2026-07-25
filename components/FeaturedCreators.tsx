@@ -1,4 +1,5 @@
 import type { FeaturedCreator } from "@/lib/getDiscoverySections";
+import Link from "next/link";
 
 export default function FeaturedCreators({
   creators,
@@ -13,11 +14,12 @@ export default function FeaturedCreators({
         Featured Creators
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-        {creators.map((creator) => (
-          <div
-            key={creator.username}
-            className="min-w-[160px] flex-shrink-0 bg-card border border-ink/10 rounded-sm px-4 py-3"
-          >
+       {creators.map((creator) => (
+  <Link
+    key={creator.username}
+    href={`/?author=${encodeURIComponent(creator.username)}`}
+    className="min-w-[160px] flex-shrink-0 bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring block"
+  >
             <p className="font-display font-bold text-ink text-sm truncate">
               {creator.username}
             </p>
@@ -29,7 +31,7 @@ export default function FeaturedCreators({
                 ★ {creator.avgRating.toFixed(1)}
               </p>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </section>

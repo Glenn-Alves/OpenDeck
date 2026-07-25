@@ -9,11 +9,13 @@ export default function DeckHeaderEdit({
   deckId,
   initialTitle,
   initialDescription,
+  initialTags,
   isOwner,
 }: {
   deckId: string;
   initialTitle: string;
   initialDescription: string;
+  initialTags: string[];
   isOwner: boolean;
 }) {
   const supabase = createClient();
@@ -22,6 +24,7 @@ export default function DeckHeaderEdit({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
+  const [tagsInput, setTagsInput] = useState(initialTags.join(", "));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,9 +36,18 @@ export default function DeckHeaderEdit({
     setSaving(true);
     setError(null);
 
+    const tagList = tagsInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
     const { error } = await supabase
       .from("decks")
-      .update({ title: title.trim(), description: description.trim() })
+      .update({
+        title: title.trim(),
+        description: description.trim(),
+        tags: tagList,
+      })
       .eq("id", deckId);
 
     setSaving(false);
@@ -52,6 +64,7 @@ export default function DeckHeaderEdit({
   function handleCancel() {
     setTitle(initialTitle);
     setDescription(initialDescription);
+    setTagsInput(initialTags.join(", "));
     setError(null);
     setEditing(false);
   }
@@ -66,7 +79,7 @@ export default function DeckHeaderEdit({
           {isOwner && (
             <button
               onClick={() => setEditing(true)}
-              aria-label="Edit deck title and description"
+              aria-label="Edit deck title, description, and tags"
               className="text-muted hover:text-ink transition-colors focus-ring mt-1"
             >
               ✎
@@ -87,7 +100,7 @@ export default function DeckHeaderEdit({
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="w-full bg-card border-2 border-ink rounded-sm px-4 py-2.5 text-sm text-ink focus-ring mb-4"
+        className="w-full bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink focus-ring mb-4"
       />
 
       <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2">
@@ -99,6 +112,18 @@ export default function DeckHeaderEdit({
         onChange={setDescription}
         placeholder="What's in this deck and who is it for?"
       />
+
+      <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2 mt-4">
+        Tags
+      </label>
+      <input
+        type="text"
+        value={tagsInput}
+        onChange={(e) => setTagsInput(e.target.value)}
+        placeholder="historical, classic, literature"
+        className="w-full bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"
+      />
+      <p className="text-xs text-muted mt-1.5">Separate tags with commas.</p>
 
       {error && <p className="text-xs text-margin mt-2">{error}</p>}
 

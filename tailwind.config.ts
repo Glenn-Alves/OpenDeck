@@ -2,16 +2,18 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        paper: "#F3F4F1",
-        ink: "#1E2A44",
-        rule: "#6E8FC7",
-        margin: "#C0473F",
-        card: "#FFFFFF",
-        muted: "#5B6472",
-      },
+  paper: "var(--color-paper)",
+  ink: "var(--color-ink)",
+  rule: "var(--color-rule)",
+  margin: "var(--color-margin)",
+  card: "var(--color-card)",
+  muted: "var(--color-muted)",
+  border: "var(--color-border)",
+},
       fontFamily: {
         display: ["var(--font-space-mono)", "monospace"],
         body: ["var(--font-inter)", "sans-serif"],

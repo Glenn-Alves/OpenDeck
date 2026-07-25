@@ -28,6 +28,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem("theme");
+                if (stored === "dark") {
+                  document.documentElement.classList.add("dark");
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className={`${spaceMono.variable} ${inter.variable} font-body`}>
         <AuthProvider>
           <Navbar />

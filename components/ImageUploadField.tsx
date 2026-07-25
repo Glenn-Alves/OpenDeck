@@ -62,7 +62,7 @@ export default function ImageUploadField({
           <img
             src={value}
             alt={label}
-            className="max-h-32 rounded-sm border border-ink/10"
+            className="max-h-32 rounded-sm border border-border"
           />
           <button
             type="button"

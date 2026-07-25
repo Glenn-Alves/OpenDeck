@@ -1,4 +1,3 @@
-import { decks as sampleDecks } from "@/lib/mockData";
 import { createClient } from "@/lib/supabase/server";
 
 export type StudyCard = {
@@ -12,21 +11,6 @@ export type StudyCard = {
 export async function getDeckForStudy(
   id: string
 ): Promise<{ title: string; cards: StudyCard[]; tags: string[] } | null> {
-  const sample = sampleDecks.find((d) => d.id === id);
-  if (sample) {
-    return {
-      title: sample.title,
-      cards: sample.cards.map((c) => ({
-        id: c.id,
-        front: c.front,
-        back: c.back,
-        frontImage: null,
-        backImage: null,
-      })),
-      tags: sample.tags,
-    };
-  }
-
   const supabase = await createClient();
 
   const { data: rootDeck, error } = await supabase

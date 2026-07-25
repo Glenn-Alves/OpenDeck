@@ -1,4 +1,3 @@
-import { decks as sampleDecks } from "@/lib/mockData";
 import Link from "next/link";
 import RatingStars from "@/components/RatingStars";
 import RatingWidget from "@/components/RatingWidget";
@@ -10,6 +9,9 @@ import DeckHeaderEdit from "@/components/DeckHeaderEdit";
 import SubsectionManager from "@/components/SubsectionManager";
 import DeleteDeckButton from "@/components/DeleteDeckButton";
 import ImportCardsIntoDeck from "@/components/ImportCardsIntoDeck";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import SubsectionTree from "@/components/SubsectionTree";
+import { getSubsectionTree } from "@/lib/getSubsectionTree";
 import MarkDeckViewed from "@/components/MarkDeckViewed";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
@@ -90,79 +92,51 @@ export default async function DeckDetailPage({
 }: {
   params: { id: string };
 }) {
-  const sample = sampleDecks.find((d) => d.id === params.id);
-  const isSample = Boolean(sample);
-
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   const currentUserId = userData.user?.id ?? null;
 
-  const deck: ViewDeck | null = sample
-    ? {
-        id: sample.id,
-        title: sample.title,
-        description: sample.description,
-        author: sample.author,
-        tags: sample.tags,
-        rating: sample.rating,
-        ratingCount: sample.ratingCount,
-        cardCount: sample.cardCount,
-        ownerId: null,
-        parentDeckId: null,
-        cards: sample.cards.map((c) => ({
-          id: c.id,
-          front: c.front,
-          back: c.back,
-          frontImage: null,
-          backImage: null,
-        })),
-        comments: sample.comments.map((c) => ({
-          id: c.id,
-          author: c.author,
-          body: c.body,
-          userId: null,
-        })),
-      }
-    : await getRealDeck(params.id);
+  const deck = await getRealDeck(params.id);
 
   if (!deck) return notFound();
 
-  const isOwner = !isSample && currentUserId !== null && currentUserId === deck.ownerId;
+  const isOwner = currentUserId !== null && currentUserId === deck.ownerId;
 
   let parentDeck: { id: string; title: string } | null = null;
   let subsections: { id: string; title: string }[] = [];
+  const ancestors: { id: string; title: string }[] = [];
 
-  if (!isSample) {
-    if (deck.parentDeckId) {
-      const { data: parentData } = await supabase
+  if (deck.parentDeckId) {
+    let currentParentId: string | null = deck.parentDeckId;
+    while (currentParentId) {
+      const { data: ancestorData }: { data: { id: string; title: string; parent_deck_id: string | null } | null } = await supabase
         .from("decks")
-        .select("id, title")
-        .eq("id", deck.parentDeckId)
+        .select("id, title, parent_deck_id")
+        .eq("id", currentParentId)
         .single();
-      parentDeck = parentData ?? null;
-    }
 
-    const { data: childData } = await supabase
-      .from("decks")
-      .select("id, title")
-      .eq("parent_deck_id", deck.id)
-      .order("created_at", { ascending: true });
-    subsections = childData ?? [];
+      if (!ancestorData) break;
+
+      ancestors.unshift({ id: ancestorData.id, title: ancestorData.title });
+      if (!parentDeck) parentDeck = { id: ancestorData.id, title: ancestorData.title };
+      currentParentId = (ancestorData as any).parent_deck_id ?? null;
+    }
   }
+  const subsectionTree = await getSubsectionTree(deck.id);
+
+  const { data: childData } = await supabase
+    .from("decks")
+    .select("id, title")
+    .eq("parent_deck_id", deck.id)
+    .order("created_at", { ascending: true });
+  subsections = childData ?? [];
 
   return (
     <div className="pt-12">
       <MarkDeckViewed tags={deck.tags} />
       {/* Header */}
-      <div className="border-b border-ink/10 pb-8 mb-8">
-        {parentDeck && (
-          <Link
-            href={`/deck/${parentDeck.id}`}
-            className="inline-block text-xs text-muted hover:text-ink transition-colors focus-ring mb-3"
-          >
-            ← {parentDeck.title}
-          </Link>
-        )}
+      <div className="pb-8 mb-8">
+        <Breadcrumbs items={[...ancestors, { id: deck.id, title: deck.title }]} />
         <p className="font-display text-xs text-muted uppercase tracking-wide mb-3">
           {deck.cardCount} cards · by {deck.author}
         </p>
@@ -170,12 +144,13 @@ export default async function DeckDetailPage({
           deckId={deck.id}
           initialTitle={deck.title}
           initialDescription={deck.description}
+          initialTags={deck.tags}
           isOwner={isOwner}
         />
 
-        <div className="flex flex-wrap items-center gap-4 mb-5">
+        <div className="mb-5">
           <RatingStars rating={deck.rating} count={deck.ratingCount} />
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {deck.tags.map((tag) => (
               <span
                 key={tag}
@@ -194,15 +169,13 @@ export default async function DeckDetailPage({
           >
             Study this deck
           </Link>
-          {!isSample && (
-            <a
-              href={`/api/anki/export/${deck.id}`}
-              className="border border-ink/20 text-ink px-5 py-2.5 rounded-sm text-sm font-medium hover:border-ink transition-colors focus-ring"
-            >
-              Export to Anki
-            </a>
-          )}
-          {!isSample && <SaveButton deckId={deck.id} />}
+          
+            <a href={`/api/anki/export/${deck.id}`}
+            className="border border-border text-ink px-5 py-2.5 rounded-sm text-sm font-medium hover:border-ink transition-colors focus-ring"
+          >
+            Export to Anki
+          </a>
+          <SaveButton deckId={deck.id} />
           {isOwner && (
             <DeleteDeckButton
               deckId={deck.id}
@@ -212,12 +185,28 @@ export default async function DeckDetailPage({
         </div>
       </div>
 
-      {!isSample && (
-        <SubsectionManager
-          parentDeckId={deck.id}
-          subsections={subsections}
-          isOwner={isOwner}
-        />
+      {parentDeck && (
+        <Link
+          href={`/deck/${parentDeck.id}`}
+          className="inline-block text-xs text-muted hover:text-ink transition-colors focus-ring mb-3"
+        >
+          ← Back to {parentDeck.title}
+        </Link>
+      )}
+
+      <SubsectionManager
+        parentDeckId={deck.id}
+        subsections={subsections}
+        isOwner={isOwner}
+      />
+
+      {subsectionTree.length > 0 && (
+        <section className="mb-12">
+          <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+            Full structure
+          </h2>
+          <SubsectionTree nodes={subsectionTree} />
+        </section>
       )}
 
       {/* Card preview list */}
@@ -235,7 +224,7 @@ export default async function DeckDetailPage({
             {deck.cards.map((card) => (
               <div
                 key={card.id}
-                className="ruled margin-rule bg-card border border-ink/10 rounded-sm p-4 pl-11 grid grid-cols-1 md:grid-cols-2 gap-4"
+                className="ruled margin-rule bg-card border border-border rounded-sm p-4 pl-11 grid grid-cols-1 md:grid-cols-2 gap-4"
               >
                 <div>
                   <p className="text-sm text-ink font-medium">{card.front}</p>
@@ -243,7 +232,7 @@ export default async function DeckDetailPage({
                     <img
                       src={card.frontImage}
                       alt="Front"
-                      className="max-h-32 mt-2 rounded-sm border border-ink/10"
+                      className="max-h-32 mt-2 rounded-sm border border-border"
                     />
                   )}
                 </div>
@@ -253,7 +242,7 @@ export default async function DeckDetailPage({
                     <img
                       src={card.backImage}
                       alt="Back"
-                      className="max-h-32 mt-2 rounded-sm border border-ink/10"
+                      className="max-h-32 mt-2 rounded-sm border border-border"
                     />
                   )}
                 </div>
@@ -265,16 +254,7 @@ export default async function DeckDetailPage({
 
       {/* Rate + comment */}
       <section className="mb-10">
-        {isSample ? (
-          <>
-            <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-              Rate this deck
-            </h2>
-            <p className="text-sm text-muted mb-8">
-              This is a sample deck — rating is disabled for demo content.
-            </p>
-          </>
-        ) : currentUserId && currentUserId === deck.ownerId ? null : (
+        {currentUserId && currentUserId === deck.ownerId ? null : (
           <>
             <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
               Rate this deck
@@ -287,13 +267,7 @@ export default async function DeckDetailPage({
           Comments ({deck.comments.length})
         </h2>
 
-        {isSample ? (
-          <p className="text-sm text-muted mb-6">
-            This is a sample deck — commenting is disabled for demo content.
-          </p>
-        ) : (
-          <CommentForm deckId={deck.id} />
-        )}
+        <CommentForm deckId={deck.id} />
 
         <div className="space-y-4">
           {deck.comments.map((comment) => (
@@ -304,7 +278,7 @@ export default async function DeckDetailPage({
             />
           ))}
           {deck.comments.length === 0 && (
-            <p className="text-sm text-muted">No comments yet — be the first to say something.</p>
+            <p className="text-sm text-muted">Be the first to say something.</p>
           )}
         </div>
       </section>

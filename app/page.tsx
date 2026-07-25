@@ -49,11 +49,12 @@ async function getRealDecks(): Promise<DeckSummary[]> {
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: { q?: string; tag?: string };
+  searchParams: { q?: string; tag?: string; author?: string };
 }) {
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const activeTag = searchParams.tag ?? "";
-  const isBrowsing = !q && !activeTag;
+  const activeAuthor = searchParams.author ?? "";
+  const isBrowsing = !q && !activeTag && !activeAuthor;
 
   const cookieStore = await cookies();
   let recentDeckTags: string[] = [];
@@ -68,17 +69,27 @@ export default async function BrowsePage({
   const allTagsSet = new Set(allDecks.flatMap((d) => d.tags));
   const visibleTags = recentDeckTags.filter((t) => allTagsSet.has(t));
 
-  const filteredDecks = allDecks.filter((deck) => {
+ const filteredDecks = allDecks.filter((deck) => {
     const matchesTag = activeTag ? deck.tags.includes(activeTag) : true;
-    const matchesQuery = q
+    const matchesAuthor = activeAuthor ? deck.author === activeAuthor : true;
+   const matchesQuery = q
       ? deck.title.toLowerCase().includes(q) ||
         deck.description.toLowerCase().includes(q) ||
-        deck.tags.some((t) => t.toLowerCase().includes(q))
+        deck.tags.some((t) => t.toLowerCase().includes(q)) ||
+        deck.author.toLowerCase().includes(q)
       : true;
-    return matchesTag && matchesQuery;
+    return matchesTag && matchesAuthor && matchesQuery;
   });
 
   const discovery = isBrowsing ? await getDiscoverySections() : null;
+  const matchingCreators = q
+    ? Array.from(new Set(allDecks.filter((d) => d.author.toLowerCase().includes(q)).map((d) => d.author))).map(
+        (author) => ({
+          username: author,
+          deckCount: allDecks.filter((d) => d.author === author).length,
+        })
+      )
+    : [];
 
   function tagHref(tag: string) {
     const params = new URLSearchParams();
@@ -91,7 +102,7 @@ export default async function BrowsePage({
   return (
     <div>
       {/* Hero */}
-      <section className="pt-16 pb-10 border-b border-ink/10 mb-10">
+      <section className="pt-16 pb-10 border-b border-border mb-10">
         <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
           a box of decks, open to everyone
         </p>
@@ -109,8 +120,8 @@ export default async function BrowsePage({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Search decks — try &ldquo;organic chemistry&rdquo;"
-            className="flex-1 bg-card border-2 border-ink rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
+            placeholder="Search"
+            className="flex-1 bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
           />
           <button
             type="submit"
@@ -129,7 +140,7 @@ export default async function BrowsePage({
             className={`text-xs rounded-full px-3 py-1.5 focus-ring transition-colors ${
               !activeTag
                 ? "bg-ink text-paper"
-                : "text-muted border border-ink/15 hover:border-rule hover:text-ink"
+                : "text-muted border border-border hover:border-rule hover:text-ink"
             }`}
           >
             All decks
@@ -141,7 +152,8 @@ export default async function BrowsePage({
               className={`text-xs rounded-full px-3 py-1.5 focus-ring transition-colors ${
                 activeTag === tag
                   ? "bg-ink text-paper"
-                  : "text-muted border border-ink/15 hover:border-rule hover:text-ink"
+                  : "text-muted border border-border hover:border-rule hover:text-ink"
+
               }`}
             >
               {tag}
@@ -168,8 +180,7 @@ export default async function BrowsePage({
                   <Link
                     key={tag}
                     href={tagHref(tag)}
-                    className="text-xs text-muted border border-ink/15 rounded-full px-3 py-1.5 hover:border-rule hover:text-ink transition-colors focus-ring"
-                  >
+className="text-xs text-muted border border-border rounded-full px-3 py-1.5 hover:border-rule hover:text-ink transition-colors focus-ring"                  >
                     {tag}
                   </Link>
                 ))}
@@ -177,14 +188,37 @@ export default async function BrowsePage({
             </section>
           )}
 
-          <div className="border-t border-ink/10 mb-10" />
-        </>
+<div className="border-t border-border mb-10" />        </>
+      )}
+      {matchingCreators.length > 0 && (
+        <section className="mb-10">
+          <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+            Creators
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {matchingCreators.map((creator) => (
+              <Link
+                key={creator.username}
+                href={`/?author=${encodeURIComponent(creator.username)}`}
+                className="min-w-[160px] flex-shrink-0 bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring block"
+              >
+                <p className="font-display font-bold text-ink text-sm truncate">
+                  {creator.username}
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  {creator.deckCount} deck{creator.deckCount !== 1 ? "s" : ""}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Deck grid */}
       <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-        {isBrowsing ? "All Decks" : "Results"}
+        {activeAuthor ? `Decks by ${activeAuthor}` : isBrowsing ? "All Decks" : "Results"}
       </h2>
+     
       {filteredDecks.length > 0 ? (
         <section aria-label="Decks" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredDecks.map((deck) => (

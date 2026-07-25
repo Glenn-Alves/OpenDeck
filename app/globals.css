@@ -5,11 +5,30 @@
 :root {
   --font-space-mono: "Space Mono", monospace;
   --font-inter: "Inter", sans-serif;
+
+  --color-paper: #F3F4F1;
+  --color-ink: #1E2A44;
+  --color-rule: #6E8FC7;
+  --color-margin: #C0473F;
+  --color-card: #FFFFFF;
+  --color-muted: #5B6472;
+  --color-border: #D8D9D5;
+}
+
+.dark {
+  --color-paper: #171A21;
+  --color-ink: #E8EAF0;
+  --color-rule: #7FA0D6;
+  --color-margin: #E0776D;
+  --color-card: #1F232C;
+  --color-muted: #9099AB;
+  --color-border: #3A3F47;
 }
 
 body {
-  background-color: #F3F4F1;
-  color: #1E2A44;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* Ruled-paper texture: horizontal lines like a notebook, used on card surfaces */

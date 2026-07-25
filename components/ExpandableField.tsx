@@ -23,7 +23,7 @@ export default function ExpandableField({
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className={`w-full text-left bg-card border-2 border-ink rounded-sm px-4 focus-ring relative group ${
+        className={`w-full text-left bg-card border-2 border-border rounded-sm px-4 focus-ring relative group ${
           compact ? "py-3 text-sm" : "py-3 min-h-[84px]"
         }`}
       >
@@ -46,7 +46,7 @@ export default function ExpandableField({
           onClick={() => setExpanded(false)}
         >
           <div
-            className="bg-card border-2 border-ink rounded-sm shadow-xl w-full max-w-2xl p-6"
+            className="bg-card border-2 border-border rounded-sm shadow-xl w-full max-w-2xl p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-3">
@@ -68,7 +68,7 @@ export default function ExpandableField({
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
               rows={10}
-              className="w-full bg-paper border-2 border-ink rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
+              className="w-full bg-paper border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
             />
             <div className="flex justify-end mt-3">
               <button
