@@ -8,8 +8,10 @@ import FeedbackModal from "./FeedbackModal";
 
 export default function ProfileMenu({
   username,
+  avatarUrl,
 }: {
   username: string;
+  avatarUrl?: string | null;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -41,9 +43,17 @@ export default function ProfileMenu({
         className="flex items-center gap-2 text-sm text-muted hover:text-ink transition-colors focus-ring"
         aria-label="Account menu"
       >
-        <span className="w-7 h-7 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-display font-bold shrink-0">
-          {username.charAt(0).toUpperCase()}
-        </span>
+       {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={username}
+            className="w-7 h-7 rounded-full object-cover shrink-0"
+          />
+        ) : (
+          <span className="w-7 h-7 rounded-full bg-ink text-paper flex items-center justify-center text-xs font-display font-bold shrink-0">
+            {username.charAt(0).toUpperCase()}
+          </span>
+        )}
         <span className="hidden sm:inline">{username}</span>
       </button>
 
@@ -53,12 +63,12 @@ export default function ProfileMenu({
             <p className="text-sm text-ink font-medium truncate">{username}</p>
           </div>
 
-          <Link
-            href="/settings"
+         <Link
+            href="/profile"
             onClick={() => setOpen(false)}
             className="block px-3 py-2 text-sm text-ink hover:bg-paper transition-colors"
           >
-            Settings
+            Profile
           </Link>
 
           

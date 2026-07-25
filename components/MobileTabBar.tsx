@@ -65,7 +65,7 @@ export default function MobileTabBar() {
       ? [
           { href: "/my-decks", label: "My Decks", icon: "decks" as const },
           { href: "/saved", label: "Saved", icon: "saved" as const },
-          { href: "/settings", label: "Settings", icon: "profile" as const },
+          { href: "/profile", label: "Profile", icon: "profile" as const },
         ]
       : []),
   ];

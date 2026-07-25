@@ -10,6 +10,16 @@ export default async function Navbar() {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
 
+  let avatarUrl: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", user.id)
+      .single();
+    avatarUrl = profile?.avatar_url ?? null;
+  }
+
   return (
     <header className="border-b-2 border-border">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -44,7 +54,10 @@ export default async function Navbar() {
           <ThemeToggle />
           {user && <NotificationBell userId={user.id} />}
         {user ? (
-            <ProfileMenu username={user.user_metadata?.username ?? user.email} />
+            <ProfileMenu
+              username={user.user_metadata?.username ?? user.email}
+              avatarUrl={avatarUrl}
+            />
           ) : (
             <Link
               href="/login"

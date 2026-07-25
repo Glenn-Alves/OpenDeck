@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import DeckCard, { type DeckSummary } from "@/components/DeckCard";
 import FollowButton from "@/components/FollowButton";
 import { notFound } from "next/navigation";
-
+import Link from "next/link";
 export default async function CreatorPage({
   params,
 }: {
@@ -13,7 +13,7 @@ export default async function CreatorPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, created_at")
+    .select("id, username, created_at, avatar_url, bio")
     .eq("username", username)
     .maybeSingle();
 
@@ -23,10 +23,15 @@ export default async function CreatorPage({
   const currentUserId = userData.user?.id ?? null;
   const isOwnProfile = currentUserId === profile.id;
 
-  const { count: followerCount } = await supabase
+ const { count: followerCount } = await supabase
     .from("follows")
     .select("id", { count: "exact", head: true })
     .eq("followed_id", profile.id);
+
+  const { count: followingCount } = await supabase
+    .from("follows")
+    .select("id", { count: "exact", head: true })
+    .eq("follower_id", profile.id);
 
   let alreadyFollowing = false;
   if (currentUserId) {
@@ -75,22 +80,55 @@ export default async function CreatorPage({
       <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
         creator
       </p>
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="font-display font-bold text-ink text-2xl md:text-3xl">
-          {profile.username}
-        </h1>
-        {!isOwnProfile && currentUserId && (
+
+      <div className="flex items-start gap-4 mb-4">
+        {profile.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt={profile.username}
+            className="w-16 h-16 rounded-full object-cover border border-border shrink-0"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-ink text-paper flex items-center justify-center text-xl font-display font-bold border border-border shrink-0">
+            {profile.username.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div>
+          <h1 className="font-display font-bold text-ink text-2xl md:text-3xl">
+            {profile.username}
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            <Link
+              href={`/creator/${encodeURIComponent(profile.username)}/followers`}
+              className="hover:text-ink transition-colors focus-ring"
+            >
+              {followerCount ?? 0} follower{followerCount === 1 ? "" : "s"}
+            </Link>
+            {" · "}
+            <Link
+              href={`/creator/${encodeURIComponent(profile.username)}/following`}
+              className="hover:text-ink transition-colors focus-ring"
+            >
+              {followingCount ?? 0} following
+            </Link>
+            {" · "}
+            {decks.length} deck{decks.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      {profile.bio && (
+        <p className="text-sm text-ink max-w-xl mb-4">{profile.bio}</p>
+      )}
+
+      {!isOwnProfile && currentUserId && (
+        <div className="mb-10">
           <FollowButton
             followedId={profile.id}
             initiallyFollowing={alreadyFollowing}
           />
-        )}
-      </div>
-      <p className="text-sm text-muted mb-10">
-        {followerCount ?? 0} follower{followerCount === 1 ? "" : "s"} ·{" "}
-        {decks.length} deck{decks.length !== 1 ? "s" : ""}
-      </p>
-
+        </div>
+      )}
       {decks.length > 0 ? (
         <section
           aria-label="Decks"
