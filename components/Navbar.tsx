@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import OnlineCount from "./OnlineCount";
 import ThemeToggle from "./ThemeToggle";
+import ProfileMenu from "./ProfileMenu";
+import NotificationBell from "./NotificationBell";
 
 export default async function Navbar() {
   const supabase = await createClient();
@@ -40,13 +42,9 @@ export default async function Navbar() {
         <div className="flex items-center gap-3">
           <OnlineCount />
           <ThemeToggle />
+          {user && <NotificationBell userId={user.id} />}
         {user ? (
-            <Link
-              href="/profile"
-              className="text-sm text-muted hover:text-ink transition-colors focus-ring hidden sm:inline"
-            >
-              {user.user_metadata?.username ?? user.email}
-            </Link>
+            <ProfileMenu username={user.user_metadata?.username ?? user.email} />
           ) : (
             <Link
               href="/login"

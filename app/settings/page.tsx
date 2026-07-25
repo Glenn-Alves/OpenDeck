@@ -1,23 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import LogoutButton from "@/components/LogoutButton";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 
-type ActivityItem = {
-  id: string;
-  type: "comment" | "rating";
-  authorName: string;
-  deckId: string;
-  deckTitle: string;
-  detail: string;
-  createdAt: string;
-};
-
-export default function ProfilePage() {
+export default function SettingsPage() {
   const supabase = createClient();
   const router = useRouter();
   const { user, loading: checkingAuth } = useAuth();
@@ -29,64 +18,6 @@ export default function ProfilePage() {
 
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-
-  const [activity, setActivity] = useState<ActivityItem[]>([]);
-  const [loadingActivity, setLoadingActivity] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-
-    async function loadActivity() {
-      setLoadingActivity(true);
-
-      const { data: commentsData } = await supabase
-        .from("comments")
-        .select(
-          "id, body, created_at, profiles(username), decks!inner(id, title, owner_id)"
-        )
-        .eq("decks.owner_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      const { data: ratingsData } = await supabase
-        .from("ratings")
-        .select(
-          "id, score, created_at, profiles(username), decks!inner(id, title, owner_id)"
-        )
-        .eq("decks.owner_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      const commentItems: ActivityItem[] = (commentsData ?? []).map((c: any) => ({
-        id: `comment-${c.id}`,
-        type: "comment",
-        authorName: c.profiles?.username ?? "someone",
-        deckId: c.decks.id,
-        deckTitle: c.decks.title,
-        detail: c.body,
-        createdAt: c.created_at,
-      }));
-
-      const ratingItems: ActivityItem[] = (ratingsData ?? []).map((r: any) => ({
-        id: `rating-${r.id}`,
-        type: "rating",
-        authorName: r.profiles?.username ?? "someone",
-        deckId: r.decks.id,
-        deckTitle: r.decks.title,
-        detail: `${r.score} star${r.score > 1 ? "s" : ""}`,
-        createdAt: r.created_at,
-      }));
-
-      const combined = [...commentItems, ...ratingItems].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-      setActivity(combined.slice(0, 20));
-      setLoadingActivity(false);
-    }
-
-    loadActivity();
-  }, [user, supabase]);
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
@@ -147,12 +78,11 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="pt-16 max-w-md">
-        
         <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
-          profile
+          settings
         </p>
         <h1 className="font-display font-bold text-ink text-2xl mb-4">
-          Log in to see your profile
+          Log in to see your settings
         </h1>
         <Link
           href="/login"
@@ -166,48 +96,12 @@ export default function ProfilePage() {
 
   return (
     <div className="pt-12 max-w-2xl">
-    
       <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
-        profile
+        settings
       </p>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display font-bold text-ink text-2xl md:text-3xl">
-          {user.user_metadata?.username ?? user.email}
-        </h1>
-        <LogoutButton />
-      </div>
-
-      <section className="mb-12">
-        <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-          Recent activity on your decks
-        </h2>
-
-        {loadingActivity ? (
-          <p className="text-sm text-muted">Loading...</p>
-        ) : activity.length === 0 ? (
-          <p className="text-sm text-muted">
-            No comments or ratings on your decks yet.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {activity.map((item) => (
-              <Link
-                key={item.id}
-                href={`/deck/${item.deckId}`}
-className="block bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring"              >
-                <p className="text-sm text-ink">
-                  <strong>{item.authorName}</strong>{" "}
-                  {item.type === "comment" ? "commented on" : "rated"}{" "}
-                  <span className="text-rule">{item.deckTitle}</span>
-                </p>
-                <p className="text-xs text-muted mt-1">
-                  {item.type === "comment" ? `"${item.detail}"` : item.detail}
-                </p>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      <h1 className="font-display font-bold text-ink text-2xl md:text-3xl mb-8">
+        {user.user_metadata?.username ?? user.email}
+      </h1>
 
       <section className="mb-12 max-w-md">
         <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
@@ -219,7 +113,8 @@ className="block bg-card border border-border rounded-sm px-4 py-3 hover:border-
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New password (at least 8 characters)"
-className="w-full bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"          />
+            className="w-full bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"
+          />
           {passwordError && <p className="text-xs text-margin">{passwordError}</p>}
           {passwordSuccess && (
             <p className="text-xs text-rule">Password updated.</p>

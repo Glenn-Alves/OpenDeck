@@ -65,13 +65,13 @@ export default function MobileTabBar() {
       ? [
           { href: "/my-decks", label: "My Decks", icon: "decks" as const },
           { href: "/saved", label: "Saved", icon: "saved" as const },
-          { href: "/profile", label: "Profile", icon: "profile" as const },
+          { href: "/settings", label: "Settings", icon: "profile" as const },
         ]
       : []),
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-ink flex justify-around items-center py-2 z-40">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-border flex justify-around items-center py-2 z-40">
       {tabs.map((tab) => {
         const active = pathname === tab.href;
         return (

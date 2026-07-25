@@ -17,7 +17,7 @@ export default function FeaturedCreators({
        {creators.map((creator) => (
   <Link
     key={creator.username}
-    href={`/?author=${encodeURIComponent(creator.username)}`}
+    href={`/creator/${encodeURIComponent(creator.username)}`}
     className="min-w-[160px] flex-shrink-0 bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring block"
   >
             <p className="font-display font-bold text-ink text-sm truncate">

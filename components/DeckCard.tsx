@@ -31,7 +31,7 @@ export default function DeckCard({ deck }: { deck: DeckSummary }) {
 <div className="ruled margin-rule bg-card border border-border rounded-sm p-5 pl-11 h-full transition-transform duration-150 group-hover:-translate-y-0.5 group-hover:shadow-[3px_4px_0_0_rgba(30,42,68,0.15)] relative pointer-events-none">        <p className="font-display text-xs text-muted uppercase tracking-wide mb-2">
           {deck.cardCount} cards · by{" "}
          <Link
-            href={`/?author=${encodeURIComponent(deck.author)}`}
+            href={`/creator/${encodeURIComponent(deck.author)}`}
             className="relative z-10 hover:text-ink transition-colors focus-ring pointer-events-auto"
           >
             {deck.author}

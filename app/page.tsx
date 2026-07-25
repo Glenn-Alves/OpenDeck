@@ -5,11 +5,14 @@ import DeckRow from "@/components/DeckRow";
 import FeaturedCreators from "@/components/FeaturedCreators";
 import { createClient } from "@/lib/supabase/server";
 import { getDiscoverySections } from "@/lib/getDiscoverySections";
+import { createPublicClient } from "@/lib/supabase/public";
+import { unstable_cache } from "next/cache";
 
-async function getRealDecks(): Promise<DeckSummary[]> {
-  const supabase = await createClient();
+const getRealDecks = unstable_cache(
+  async (): Promise<DeckSummary[]> => {
+    const supabase = createPublicClient();
 
-  const { data, error } = await supabase
+    const { data, error } = await supabase
     .from("decks")
     .select(
       "id, title, description, tags, created_at, updated_at, export_count, save_count, difficulty, cards(count), ratings(score), profiles(username)"
@@ -23,28 +26,31 @@ async function getRealDecks(): Promise<DeckSummary[]> {
     return [];
   }
 
-  return data.map((row: any) => {
-    const scores: number[] = (row.ratings ?? []).map((r: any) => r.score);
-    const avgRating = scores.length
-      ? scores.reduce((a, b) => a + b, 0) / scores.length
-      : 0;
+return data.map((row: any) => {
+      const scores: number[] = (row.ratings ?? []).map((r: any) => r.score);
+      const avgRating = scores.length
+        ? scores.reduce((a, b) => a + b, 0) / scores.length
+        : 0;
 
-    return {
-  id: row.id,
-  title: row.title,
-  description: row.description ?? "",
-  author: row.profiles?.username ?? "an opendeck user",
-  tags: row.tags ?? [],
-  rating: avgRating,
-  ratingCount: scores.length,
-  cardCount: row.cards?.[0]?.count ?? 0,
-  difficulty: row.difficulty ?? "Medium",
-  exportCount: row.export_count ?? 0,
-  saveCount: row.save_count ?? 0,
-  updatedAt: row.updated_at ?? row.created_at,
-};
-  });
-}
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description ?? "",
+        author: row.profiles?.username ?? "an opendeck user",
+        tags: row.tags ?? [],
+        rating: avgRating,
+        ratingCount: scores.length,
+        cardCount: row.cards?.[0]?.count ?? 0,
+        difficulty: row.difficulty ?? "Medium",
+        exportCount: row.export_count ?? 0,
+        saveCount: row.save_count ?? 0,
+        updatedAt: row.updated_at ?? row.created_at,
+      };
+    });
+  },
+  ["real-decks"],
+  { revalidate: 60 }
+);
 
 export default async function BrowsePage({
   searchParams,
@@ -199,7 +205,7 @@ className="text-xs text-muted border border-border rounded-full px-3 py-1.5 hove
             {matchingCreators.map((creator) => (
               <Link
                 key={creator.username}
-                href={`/?author=${encodeURIComponent(creator.username)}`}
+                href={`/creator/${encodeURIComponent(creator.username)}`}
                 className="min-w-[160px] flex-shrink-0 bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring block"
               >
                 <p className="font-display font-bold text-ink text-sm truncate">
