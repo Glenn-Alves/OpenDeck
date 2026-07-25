@@ -29,7 +29,9 @@ function TreeNode({ node, depth }: { node: SubsectionNode; depth: number }) {
           href={`/deck/${node.id}`}
           className="text-sm text-ink hover:text-rule transition-colors focus-ring flex items-center gap-1.5"
         >
-          <span aria-hidden="true">📁</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
           {node.title}
         </Link>
       </div>
