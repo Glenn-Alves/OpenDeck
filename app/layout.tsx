@@ -4,6 +4,8 @@ import Navbar from "@/components/Navbar";
 import MobileTabBar from "@/components/MobileTabBar";
 import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
+
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
@@ -48,6 +50,7 @@ export default function RootLayout({
           <main className="max-w-6xl mx-auto px-6 pb-24 md:pb-24">{children}</main>
           <MobileTabBar />
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

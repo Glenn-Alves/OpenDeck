@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import DeckCard, { type DeckSummary } from "@/components/DeckCard";
 import DeckRow from "@/components/DeckRow";
 import FeaturedCreators from "@/components/FeaturedCreators";
-import { createClient } from "@/lib/supabase/server";
+
 import { getDiscoverySections } from "@/lib/getDiscoverySections";
 import { createPublicClient } from "@/lib/supabase/public";
 import { unstable_cache } from "next/cache";
@@ -55,12 +55,11 @@ return data.map((row: any) => {
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: { q?: string; tag?: string; author?: string };
+  searchParams: { q?: string; tag?: string };
 }) {
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const activeTag = searchParams.tag ?? "";
-  const activeAuthor = searchParams.author ?? "";
-  const isBrowsing = !q && !activeTag && !activeAuthor;
+  const isBrowsing = !q && !activeTag;
 
   const cookieStore = await cookies();
   let recentDeckTags: string[] = [];
@@ -77,14 +76,13 @@ export default async function BrowsePage({
 
  const filteredDecks = allDecks.filter((deck) => {
     const matchesTag = activeTag ? deck.tags.includes(activeTag) : true;
-    const matchesAuthor = activeAuthor ? deck.author === activeAuthor : true;
    const matchesQuery = q
       ? deck.title.toLowerCase().includes(q) ||
         deck.description.toLowerCase().includes(q) ||
         deck.tags.some((t) => t.toLowerCase().includes(q)) ||
         deck.author.toLowerCase().includes(q)
       : true;
-    return matchesTag && matchesAuthor && matchesQuery;
+    return matchesTag && matchesQuery;
   });
 
   const discovery = isBrowsing ? await getDiscoverySections() : null;
@@ -222,7 +220,7 @@ className="text-xs text-muted border border-border rounded-full px-3 py-1.5 hove
 
       {/* Deck grid */}
       <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-        {activeAuthor ? `Decks by ${activeAuthor}` : isBrowsing ? "All Decks" : "Results"}
+        {isBrowsing ? "All Decks" : "Results"}
       </h2>
      
       {filteredDecks.length > 0 ? (
