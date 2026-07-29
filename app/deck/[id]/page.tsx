@@ -33,6 +33,8 @@ type ViewDeck = {
     back: string;
     frontImage: string | null;
     backImage: string | null;
+    cardType: "flashcard" | "multiple_choice";
+    choices: string[] | null;
   }[];
   comments: { id: string; author: string; body: string; userId: string | null }[];
 };
@@ -43,7 +45,7 @@ async function getRealDeck(id: string): Promise<ViewDeck | null> {
   const { data: deck, error } = await supabase
     .from("decks")
     .select(
-      "id, title, description, tags, owner_id, parent_deck_id, profiles(username), cards(id, front_text, back_text, front_image_url, back_image_url), ratings(score), comments(id, body, created_at, user_id, profiles(username))"
+      "id, title, description, tags, owner_id, parent_deck_id, profiles(username), cards(id, front_text, back_text, front_image_url, back_image_url, card_type, choices), ratings(score), comments(id, body, created_at, user_id, profiles(username))"
     )
     .eq("id", id)
     .single();
@@ -77,6 +79,8 @@ async function getRealDeck(id: string): Promise<ViewDeck | null> {
       back: c.back_text,
       frontImage: c.front_image_url ?? null,
       backImage: c.back_image_url ?? null,
+      cardType: c.card_type ?? "flashcard",
+      choices: c.choices ?? null,
     })),
     comments: sortedComments.map((c: any) => ({
       id: c.id,
@@ -119,7 +123,7 @@ export default async function DeckDetailPage({
 
       ancestors.unshift({ id: ancestorData.id, title: ancestorData.title });
       if (!parentDeck) parentDeck = { id: ancestorData.id, title: ancestorData.title };
-      currentParentId = (ancestorData as any).parent_deck_id ?? null;
+      currentParentId = ancestorData.parent_deck_id ?? null;
     }
   }
   const subsectionTree = await getSubsectionTree(deck.id);
@@ -170,7 +174,7 @@ export default async function DeckDetailPage({
             Study this deck
           </Link>
           
-            <a href={`/api/anki/export/${deck.id}`}
+           <a href={`/api/anki/export/${deck.id}`}
             className="border border-border text-ink px-5 py-2.5 rounded-sm text-sm font-medium hover:border-ink transition-colors focus-ring"
           >
             Export to Anki

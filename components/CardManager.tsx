@@ -12,6 +12,8 @@ type Row = {
   back: string;
   frontImage: string | null;
   backImage: string | null;
+  cardType: "flashcard" | "multiple_choice";
+  choices: string[];
   saving: boolean;
   error: string | null;
 };
@@ -27,6 +29,8 @@ export default function CardManager({
     back: string;
     frontImage: string | null;
     backImage: string | null;
+    cardType?: "flashcard" | "multiple_choice";
+    choices?: string[] | null;
   }[];
 }) {
   const supabase = createClient();
@@ -39,6 +43,8 @@ export default function CardManager({
       back: c.back,
       frontImage: c.frontImage,
       backImage: c.backImage,
+      cardType: c.cardType ?? "flashcard",
+      choices: c.choices && c.choices.length === 4 ? c.choices : ["", "", "", ""],
       saving: false,
       error: null,
     }))
@@ -60,6 +66,22 @@ export default function CardManager({
     );
   }
 
+  function updateRowType(index: number, type: Row["cardType"]) {
+    setRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, cardType: type } : r))
+    );
+  }
+
+  function updateRowChoice(index: number, choiceIndex: number, value: string) {
+    setRows((prev) =>
+      prev.map((r, i) =>
+        i === index
+          ? { ...r, choices: r.choices.map((ch, ci) => (ci === choiceIndex ? value : ch)) }
+          : r
+      )
+    );
+  }
+
   function addRow() {
     setRows((prev) => [
       ...prev,
@@ -69,6 +91,8 @@ export default function CardManager({
         back: "",
         frontImage: null,
         backImage: null,
+        cardType: "flashcard",
+        choices: ["", "", "", ""],
         saving: false,
         error: null,
       },
@@ -86,19 +110,42 @@ export default function CardManager({
       return;
     }
 
+    if (row.cardType === "multiple_choice") {
+      const filledChoices = row.choices.filter((ch) => ch.trim());
+      const hasMatch = row.choices.some((ch) => ch.trim() === row.back.trim());
+      if (filledChoices.length !== 4 || !hasMatch) {
+        setRows((prev) =>
+          prev.map((r, i) =>
+            i === index
+              ? {
+                  ...r,
+                  error:
+                    "Multiple choice cards need all 4 choices filled, with one exactly matching the correct answer.",
+                }
+              : r
+          )
+        );
+        return;
+      }
+    }
+
     setRows((prev) =>
       prev.map((r, i) => (i === index ? { ...r, saving: true, error: null } : r))
     );
 
+    const payload = {
+      front_text: row.front.trim(),
+      back_text: row.back.trim(),
+      front_image_url: row.frontImage,
+      back_image_url: row.backImage,
+      card_type: row.cardType,
+      choices: row.cardType === "multiple_choice" ? row.choices.map((ch) => ch.trim()) : null,
+    };
+
     if (row.id) {
       const { error } = await supabase
         .from("cards")
-        .update({
-          front_text: row.front.trim(),
-          back_text: row.back.trim(),
-          front_image_url: row.frontImage,
-          back_image_url: row.backImage,
-        })
+        .update(payload)
         .eq("id", row.id);
 
       setRows((prev) =>
@@ -109,13 +156,7 @@ export default function CardManager({
     } else {
       const { data, error } = await supabase
         .from("cards")
-        .insert({
-          deck_id: deckId,
-          front_text: row.front.trim(),
-          back_text: row.back.trim(),
-          front_image_url: row.frontImage,
-          back_image_url: row.backImage,
-        })
+        .insert({ deck_id: deckId, ...payload })
         .select()
         .single();
 
@@ -148,42 +189,81 @@ export default function CardManager({
       {rows.map((row, i) => (
         <div
           key={row.id ?? `new-${i}`}
-          className="bg-card border border-ink/10 rounded-sm p-4 grid grid-cols-1 md:grid-cols-2 gap-4 relative"
+          className="bg-card border border-border rounded-sm p-4 relative"
         >
-          <div>
-            <ExpandableField
-              label="Front"
-              value={row.front}
-              onChange={(v) => updateRow(i, "front", v)}
-              placeholder="Front"
-              compact
-            />
-            <ImageUploadField
-              label="Front"
-              value={row.frontImage}
-              onChange={(url) => updateRowImage(i, "frontImage", url)}
-            />
-          </div>
-          <div>
-            <ExpandableField
-              label="Back"
-              value={row.back}
-              onChange={(v) => updateRow(i, "back", v)}
-              placeholder="Back"
-              compact
-            />
-            <ImageUploadField
-              label="Back"
-              value={row.backImage}
-              onChange={(url) => updateRowImage(i, "backImage", url)}
-            />
+          <div className="flex gap-2 mb-3">
+            {(["flashcard", "multiple_choice"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => updateRowType(i, type)}
+                className={`px-3 py-1.5 rounded-sm text-xs font-medium border transition-colors focus-ring ${
+                  row.cardType === type
+                    ? "bg-ink text-paper border-ink"
+                    : "bg-card text-muted border-border hover:border-ink/50"
+                }`}
+              >
+                {type === "flashcard" ? "Flashcard" : "Multiple Choice"}
+              </button>
+            ))}
           </div>
 
-          {row.error && (
-            <p className="md:col-span-2 text-xs text-margin">{row.error}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <ExpandableField
+                label={row.cardType === "flashcard" ? "Front" : "Question"}
+                value={row.front}
+                onChange={(v) => updateRow(i, "front", v)}
+                placeholder={row.cardType === "flashcard" ? "Front" : "Question"}
+                compact
+              />
+              <ImageUploadField
+                label="Front"
+                value={row.frontImage}
+                onChange={(url) => updateRowImage(i, "frontImage", url)}
+              />
+            </div>
+            <div>
+              <ExpandableField
+                label={row.cardType === "flashcard" ? "Back" : "Correct Answer"}
+                value={row.back}
+                onChange={(v) => updateRow(i, "back", v)}
+                placeholder={row.cardType === "flashcard" ? "Back" : "Correct answer"}
+                compact
+              />
+              <ImageUploadField
+                label="Back"
+                value={row.backImage}
+                onChange={(url) => updateRowImage(i, "backImage", url)}
+              />
+            </div>
+          </div>
+
+          {row.cardType === "multiple_choice" && (
+            <div className="mt-3">
+              <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2">
+                Answer choices (one must exactly match the correct answer above)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {row.choices.map((choice, ci) => (
+                  <input
+                    key={ci}
+                    type="text"
+                    value={choice}
+                    onChange={(e) => updateRowChoice(i, ci, e.target.value)}
+                    placeholder={`Choice ${ci + 1}`}
+                    className="w-full bg-paper border-2 border-border rounded-sm px-3 py-2 text-sm text-ink placeholder:text-muted focus-ring"
+                  />
+                ))}
+              </div>
+            </div>
           )}
 
-          <div className="md:col-span-2 flex gap-3">
+          {row.error && (
+            <p className="mt-2 text-xs text-margin">{row.error}</p>
+          )}
+
+          <div className="mt-3 flex gap-3">
             <button
               type="button"
               onClick={() => saveRow(i)}

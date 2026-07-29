@@ -6,8 +6,9 @@ export type StudyCard = {
   back: string;
   frontImage: string | null;
   backImage: string | null;
+  cardType: "flashcard" | "multiple_choice";
+  choices: string[] | null;
 };
-
 export async function getDeckForStudy(
   id: string
 ): Promise<{ title: string; cards: StudyCard[]; tags: string[] } | null> {
@@ -40,7 +41,7 @@ export async function getDeckForStudy(
 
   const { data: cardsData } = await supabase
     .from("cards")
-    .select("id, front_text, back_text, front_image_url, back_image_url")
+    .select("id, front_text, back_text, front_image_url, back_image_url, card_type, choices")
     .in("deck_id", allDeckIds);
 
   return {
@@ -51,6 +52,8 @@ export async function getDeckForStudy(
       back: c.back_text,
       frontImage: c.front_image_url ?? null,
       backImage: c.back_image_url ?? null,
+      cardType: c.card_type ?? "flashcard",
+      choices: c.choices ?? null,
     })),
     tags: rootDeck.tags ?? [],
   };

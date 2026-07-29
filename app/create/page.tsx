@@ -14,6 +14,8 @@ type CardInput = {
   back: string;
   frontImage: string | null;
   backImage: string | null;
+  cardType: "flashcard" | "multiple_choice";
+  choices: string[];
 };
 
 export default function CreateDeckPage() {
@@ -25,7 +27,7 @@ export default function CreateDeckPage() {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [cards, setCards] = useState<CardInput[]>([
-    { front: "", back: "", frontImage: null, backImage: null },
+    { front: "", back: "", frontImage: null, backImage: null, cardType: "flashcard", choices: ["", "", "", ""] },
   ]);
 
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
@@ -44,7 +46,7 @@ export default function CreateDeckPage() {
     setImporting(true);
     setImportError(null);
 
-const formData = new FormData();
+    const formData = new FormData();
     formData.append("file", file);
 
     try {
@@ -76,6 +78,8 @@ const formData = new FormData();
               back: c.back,
               frontImage: c.frontImage ?? null,
               backImage: c.backImage ?? null,
+              cardType: "flashcard" as const,
+              choices: ["", "", "", ""],
             })
           )
         );
@@ -110,8 +114,24 @@ const formData = new FormData();
   function addCard() {
     setCards((prev) => [
       ...prev,
-      { front: "", back: "", frontImage: null, backImage: null },
+      { front: "", back: "", frontImage: null, backImage: null, cardType: "flashcard", choices: ["", "", "", ""] },
     ]);
+  }
+
+  function updateCardType(index: number, type: CardInput["cardType"]) {
+    setCards((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, cardType: type } : c))
+    );
+  }
+
+  function updateChoice(index: number, choiceIndex: number, value: string) {
+    setCards((prev) =>
+      prev.map((c, i) =>
+        i === index
+          ? { ...c, choices: c.choices.map((ch, ci) => (ci === choiceIndex ? value : ch)) }
+          : c
+      )
+    );
   }
 
   function removeCard(index: number) {
@@ -131,9 +151,23 @@ const formData = new FormData();
       return;
     }
 
-    const validCards = cards.filter((c) => c.front.trim() && c.back.trim());
+    const validCards = cards.filter((c) => {
+  if (!c.front.trim() || !c.back.trim()) return false;
+  if (c.cardType === "multiple_choice") {
+    const filledChoices = c.choices.map((ch) => ch.trim()).filter(Boolean);
+    const uniqueChoices = new Set(filledChoices);
+    return (
+      filledChoices.length === 4 &&
+      uniqueChoices.size === 4 &&
+      filledChoices.includes(c.back.trim())
+    );
+  }
+  return true;
+});
     if (validCards.length === 0) {
-      setError("Add at least one card with both a front and back.");
+      setError(
+        "Add at least one valid card. Multiple choice cards need all 4 choices filled, with one exactly matching the correct answer."
+      );
       return;
     }
 
@@ -155,7 +189,6 @@ const formData = new FormData();
         difficulty,
         visibility: "public",
       })
-      
       .select()
       .single();
 
@@ -173,6 +206,8 @@ const formData = new FormData();
         back_text: c.back.trim(),
         front_image_url: c.frontImage,
         back_image_url: c.backImage,
+        card_type: c.cardType,
+        choices: c.cardType === "multiple_choice" ? c.choices.map((ch) => ch.trim()) : null,
       }))
     );
 
@@ -233,13 +268,13 @@ const formData = new FormData();
           Deck ID: <code className="text-ink">{publishedDeckId}</code>
         </p>
         <button
-         onClick={() => {
+          onClick={() => {
             setPublishedDeckId(null);
             setTitle("");
             setDescription("");
             setTags("");
             setDifficulty("Medium");
-            setCards([{ front: "", back: "", frontImage: null, backImage: null }]);
+            setCards([{ front: "", back: "", frontImage: null, backImage: null, cardType: "flashcard", choices: ["", "", "", ""] }]);
           }}
           className="text-sm text-rule hover:text-ink transition-colors focus-ring"
         >
@@ -251,7 +286,6 @@ const formData = new FormData();
 
   return (
     <div className="pt-12 max-w-2xl">
-      
       <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
         new deck
       </p>
@@ -269,7 +303,8 @@ const formData = new FormData();
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="The Count of Monte Cristo"
-className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"          />
+            className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
+          />
         </div>
 
         <div>
@@ -293,31 +328,32 @@ className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm te
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="historical, classic, literature"
-className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"          />
+            className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm text-ink placeholder:text-muted focus-ring"
+          />
           <p className="text-xs text-muted mt-1.5">Separate tags with commas.</p>
         </div>
 
         <div>
-  <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2">
-    Difficulty
-  </label>
-  <div className="flex gap-2">
-    {(["Easy", "Medium", "Hard"] as const).map((level) => (
-      <button
-        key={level}
-        type="button"
-        onClick={() => setDifficulty(level)}
-        className={`px-4 py-2 rounded-sm text-sm font-medium border-2 transition-colors focus-ring ${
-  difficulty === level
-    ? "bg-ink text-paper border-ink"
-    : "bg-card text-muted border-border hover:border-ink/50"
-}`}
-      >
-        {level}
-      </button>
-    ))}
-  </div>
-</div>
+          <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2">
+            Difficulty
+          </label>
+          <div className="flex gap-2">
+            {(["Easy", "Medium", "Hard"] as const).map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setDifficulty(level)}
+                className={`px-4 py-2 rounded-sm text-sm font-medium border-2 transition-colors focus-ring ${
+                  difficulty === level
+                    ? "bg-ink text-paper border-ink"
+                    : "bg-card text-muted border-border hover:border-ink/50"
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="border-2 border-dashed border-border rounded-sm p-6 text-center">
           <p className="text-sm text-ink font-medium mb-1">
@@ -354,36 +390,76 @@ className="w-full bg-card border-2 border-border rounded-sm px-4 py-3 text-sm te
             {cards.map((card, i) => (
               <div
                 key={i}
-                className="bg-card border border-border rounded-sm p-4 grid grid-cols-1 md:grid-cols-2 gap-4 relative"
+                className="bg-card border border-border rounded-sm p-4 relative"
               >
-                <div>
-                  <ExpandableField
-                    label="Front"
-                    value={card.front}
-                    onChange={(v) => updateCard(i, "front", v)}
-                    placeholder="Front"
-                    compact
-                  />
-                  <ImageUploadField
-                    label="Front"
-                    value={card.frontImage}
-                    onChange={(url) => updateCardImage(i, "frontImage", url)}
-                  />
+                <div className="flex gap-2 mb-3">
+                  {(["flashcard", "multiple_choice"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => updateCardType(i, type)}
+                      className={`px-3 py-1.5 rounded-sm text-xs font-medium border transition-colors focus-ring ${
+                        card.cardType === type
+                          ? "bg-ink text-paper border-ink"
+                          : "bg-card text-muted border-border hover:border-ink/50"
+                      }`}
+                    >
+                      {type === "flashcard" ? "Flashcard" : "Multiple Choice"}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <ExpandableField
-                    label="Back"
-                    value={card.back}
-                    onChange={(v) => updateCard(i, "back", v)}
-                    placeholder="Back"
-                    compact
-                  />
-                  <ImageUploadField
-                    label="Back"
-                    value={card.backImage}
-                    onChange={(url) => updateCardImage(i, "backImage", url)}
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <ExpandableField
+                      label={card.cardType === "flashcard" ? "Front" : "Question"}
+                      value={card.front}
+                      onChange={(v) => updateCard(i, "front", v)}
+                      placeholder={card.cardType === "flashcard" ? "Front" : "Question"}
+                      compact
+                    />
+                    <ImageUploadField
+                      label="Front"
+                      value={card.frontImage}
+                      onChange={(url) => updateCardImage(i, "frontImage", url)}
+                    />
+                  </div>
+                  <div>
+                    <ExpandableField
+                      label={card.cardType === "flashcard" ? "Back" : "Correct Answer"}
+                      value={card.back}
+                      onChange={(v) => updateCard(i, "back", v)}
+                      placeholder={card.cardType === "flashcard" ? "Back" : "Correct answer"}
+                      compact
+                    />
+                    <ImageUploadField
+                      label="Back"
+                      value={card.backImage}
+                      onChange={(url) => updateCardImage(i, "backImage", url)}
+                    />
+                  </div>
                 </div>
+
+                {card.cardType === "multiple_choice" && (
+                  <div className="mt-3">
+                    <label className="block font-display text-xs text-ink uppercase tracking-wide mb-2">
+                      Answer choices (one must exactly match the correct answer above)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {card.choices.map((choice, ci) => (
+                        <input
+                          key={ci}
+                          type="text"
+                          value={choice}
+                          onChange={(e) => updateChoice(i, ci, e.target.value)}
+                          placeholder={`Choice ${ci + 1}`}
+                          className="w-full bg-paper border-2 border-border rounded-sm px-3 py-2 text-sm text-ink placeholder:text-muted focus-ring"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {cards.length > 1 && (
                   <button
                     type="button"
