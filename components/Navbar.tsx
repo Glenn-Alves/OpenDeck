@@ -4,11 +4,12 @@ import OnlineCount from "./OnlineCount";
 import ThemeToggle from "./ThemeToggle";
 import ProfileMenu from "./ProfileMenu";
 import NotificationBell from "./NotificationBell";
+import MessageIcon from "./MessageIcon";
 
 export default async function Navbar() {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user ?? null;
 
   let avatarUrl: string | null = null;
   if (user) {
@@ -37,7 +38,7 @@ export default async function Navbar() {
           <Link href="/create" className="hover:text-ink transition-colors focus-ring">
             New deck
           </Link>
-         {user && (
+          {user && (
             <Link href="/my-decks" className="hover:text-ink transition-colors focus-ring">
               My Decks
             </Link>
@@ -53,7 +54,8 @@ export default async function Navbar() {
           <OnlineCount />
           <ThemeToggle />
           {user && <NotificationBell userId={user.id} />}
-        {user ? (
+          {user && <MessageIcon userId={user.id} />}
+          {user ? (
             <ProfileMenu
               username={user.user_metadata?.username ?? user.email}
               avatarUrl={avatarUrl}

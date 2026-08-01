@@ -1,6 +1,5 @@
 import type { DeckSummary } from "@/components/DeckCard";
 import { createPublicClient } from "@/lib/supabase/public";
-import { unstable_cache } from "next/cache";
 
 function toSummary(d: any): DeckSummary {
   const scores: number[] = (d.ratings ?? []).map((r: any) => r.score);
@@ -33,8 +32,7 @@ export type FeaturedCreator = {
   avgRating: number;
 };
 
-export const getDiscoverySections = unstable_cache(
-  async () => {
+export async function getDiscoverySections() {
     const supabase = createPublicClient();
 
     const { data: allDecksRaw } = await supabase
@@ -129,7 +127,4 @@ export const getDiscoverySections = unstable_cache(
       featuredCreators,
       popularTags,
     };
-  },
-  ["discovery-sections"],
-  { revalidate: 60 }
-);
+}

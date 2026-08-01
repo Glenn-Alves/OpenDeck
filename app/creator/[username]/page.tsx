@@ -122,13 +122,19 @@ export default async function CreatorPage({
       )}
 
       {!isOwnProfile && currentUserId && (
-        <div className="mb-10">
-          <FollowButton
-            followedId={profile.id}
-            initiallyFollowing={alreadyFollowing}
-          />
-        </div>
-      )}
+  <div className="mb-10 flex gap-2">
+    <FollowButton
+      followedId={profile.id}
+      initiallyFollowing={alreadyFollowing}
+    />
+    <Link
+      href={`/messages/${encodeURIComponent(profile.username)}`}
+      className="bg-card border border-border text-ink px-4 py-2 rounded-sm text-sm font-medium hover:border-ink transition-colors focus-ring"
+    >
+      Message
+    </Link>
+  </div>
+)}
       {decks.length > 0 ? (
         <section
           aria-label="Decks"

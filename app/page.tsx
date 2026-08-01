@@ -6,10 +6,8 @@ import FeaturedCreators from "@/components/FeaturedCreators";
 
 import { getDiscoverySections } from "@/lib/getDiscoverySections";
 import { createPublicClient } from "@/lib/supabase/public";
-import { unstable_cache } from "next/cache";
 
-const getRealDecks = unstable_cache(
-  async (): Promise<DeckSummary[]> => {
+async function getRealDecks(): Promise<DeckSummary[]> {
     const supabase = createPublicClient();
 
     const { data, error } = await supabase
@@ -47,10 +45,7 @@ return data.map((row: any) => {
         updatedAt: row.updated_at ?? row.created_at,
       };
     });
-  },
-  ["real-decks"],
-  { revalidate: 60 }
-);
+}
 
 export default async function BrowsePage({
   searchParams,
