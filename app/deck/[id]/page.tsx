@@ -6,11 +6,11 @@ import CommentItem from "@/components/CommentItem";
 import SaveButton from "@/components/SaveButton";
 import CardManager from "@/components/CardManager";
 import DeckHeaderEdit from "@/components/DeckHeaderEdit";
-import SubsectionManager from "@/components/SubsectionManager";
-import DeleteDeckButton from "@/components/DeleteDeckButton";
-import ImportCardsIntoDeck from "@/components/ImportCardsIntoDeck";
-import Breadcrumbs from "@/components/Breadcrumbs";
+import SubsectionManagerDraggable from "@/components/SubsectionManagerDraggable";
 import SubsectionTree from "@/components/SubsectionTree";
+import DeleteDeckButton from "@/components/DeleteDeckButton";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ResizableImage from "@/components/ResizableImage";
 import { getSubsectionTree } from "@/lib/getSubsectionTree";
 import MarkDeckViewed from "@/components/MarkDeckViewed";
 import { createClient } from "@/lib/supabase/server";
@@ -33,7 +33,9 @@ type ViewDeck = {
     back: string;
     frontImage: string | null;
     backImage: string | null;
-    cardType: "flashcard" | "multiple_choice";
+    frontImageWidth: number | null;
+    backImageWidth: number | null;
+    cardType: "flashcard" | "multiple_choice" | "identification";
     choices: string[] | null;
   }[];
   comments: { id: string; author: string; body: string; userId: string | null }[];
@@ -45,7 +47,7 @@ async function getRealDeck(id: string): Promise<ViewDeck | null> {
   const { data: deck, error } = await supabase
     .from("decks")
     .select(
-      "id, title, description, tags, owner_id, parent_deck_id, profiles(username), cards(id, front_text, back_text, front_image_url, back_image_url, card_type, choices), ratings(score), comments(id, body, created_at, user_id, profiles(username))"
+      "id, title, description, tags, owner_id, parent_deck_id, profiles(username), cards(id, front_text, back_text, front_image_url, back_image_url, front_image_width, back_image_width, card_type, choices), ratings(score), comments(id, body, created_at, user_id, profiles(username))"
     )
     .eq("id", id)
     .single();
@@ -79,6 +81,8 @@ async function getRealDeck(id: string): Promise<ViewDeck | null> {
       back: c.back_text,
       frontImage: c.front_image_url ?? null,
       backImage: c.back_image_url ?? null,
+      frontImageWidth: c.front_image_width ?? null,
+      backImageWidth: c.back_image_width ?? null,
       cardType: c.card_type ?? "flashcard",
       choices: c.choices ?? null,
     })),
@@ -107,7 +111,6 @@ export default async function DeckDetailPage({
   const isOwner = currentUserId !== null && currentUserId === deck.ownerId;
 
   let parentDeck: { id: string; title: string } | null = null;
-  let subsections: { id: string; title: string }[] = [];
   const ancestors: { id: string; title: string }[] = [];
 
   if (deck.parentDeckId) {
@@ -126,14 +129,8 @@ export default async function DeckDetailPage({
       currentParentId = ancestorData.parent_deck_id ?? null;
     }
   }
-  const subsectionTree = await getSubsectionTree(deck.id);
 
-  const { data: childData } = await supabase
-    .from("decks")
-    .select("id, title")
-    .eq("parent_deck_id", deck.id)
-    .order("created_at", { ascending: true });
-  subsections = childData ?? [];
+  const subsectionTree = await getSubsectionTree(deck.id);
 
   return (
     <div className="pt-12">
@@ -174,7 +171,7 @@ export default async function DeckDetailPage({
             Study this deck
           </Link>
           
-           <a href={`/api/anki/export/${deck.id}`}
+            <a href={`/api/anki/export/${deck.id}`}
             className="border border-border text-ink px-5 py-2.5 rounded-sm text-sm font-medium hover:border-ink transition-colors focus-ring"
           >
             Export to Anki
@@ -198,94 +195,93 @@ export default async function DeckDetailPage({
         </Link>
       )}
 
-      <SubsectionManager
-        parentDeckId={deck.id}
-        subsections={subsections}
-        isOwner={isOwner}
-      />
-
-      {subsectionTree.length > 0 && (
+      <div>
         <section className="mb-12">
           <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-            Full structure
+            Subsections
           </h2>
-          <SubsectionTree nodes={subsectionTree} />
-        </section>
-      )}
-
-      {/* Card preview list */}
-      <section className="mb-12">
-        <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-          {isOwner ? "Manage cards" : "Preview"}
-        </h2>
-        {isOwner ? (
-          <>
-            <ImportCardsIntoDeck deckId={deck.id} />
-            <CardManager deckId={deck.id} initialCards={deck.cards} />
-          </>
-        ) : (
-          <div className="space-y-3">
-            {deck.cards.map((card) => (
-              <div
-                key={card.id}
-                className="ruled margin-rule bg-card border border-border rounded-sm p-4 pl-11 grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div>
-                  <p className="text-sm text-ink font-medium">{card.front}</p>
-                  {card.frontImage && (
-                    <img
-                      src={card.frontImage}
-                      alt="Front"
-                      className="max-h-32 mt-2 rounded-sm border border-border"
-                    />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm text-muted">{card.back}</p>
-                  {card.backImage && (
-                    <img
-                      src={card.backImage}
-                      alt="Back"
-                      className="max-h-32 mt-2 rounded-sm border border-border"
-                    />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Rate + comment */}
-      <section className="mb-10">
-        {currentUserId && currentUserId === deck.ownerId ? null : (
-          <>
-            <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-              Rate this deck
-            </h2>
-            <RatingWidget deckId={deck.id} />
-          </>
-        )}
-
-        <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
-          Comments ({deck.comments.length})
-        </h2>
-
-        <CommentForm deckId={deck.id} />
-
-        <div className="space-y-4">
-          {deck.comments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              currentUserId={currentUserId}
-            />
-          ))}
-          {deck.comments.length === 0 && (
-            <p className="text-sm text-muted">Be the first to say something.</p>
+          {isOwner ? (
+            <SubsectionManagerDraggable deckId={deck.id} initialNodes={subsectionTree} />
+          ) : subsectionTree.length > 0 ? (
+            <SubsectionTree nodes={subsectionTree} />
+          ) : (
+            <p className="text-sm text-muted">No subsections.</p>
           )}
-        </div>
-      </section>
+        </section>
+
+        {/* Card preview list */}
+        <section className="mb-12">
+          <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+            {isOwner ? "Manage cards" : "Preview"}
+          </h2>
+          {isOwner ? (
+            <CardManager deckId={deck.id} initialCards={deck.cards} />
+          ) : (
+            <div className="space-y-3">
+              {deck.cards.map((card) => (
+                <div
+                  key={card.id}
+                  className="ruled margin-rule bg-card border border-border rounded-sm p-4 pl-11 grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
+                  <div>
+                    <p className="text-sm text-ink font-medium">{card.front}</p>
+                    {card.frontImage && (
+                      <div className="mt-2">
+                        <ResizableImage
+                          src={card.frontImage}
+                          width={card.frontImageWidth}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted">{card.back}</p>
+                    {card.backImage && (
+                      <div className="mt-2">
+                        <ResizableImage
+                          src={card.backImage}
+                          width={card.backImageWidth}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Rate + comment */}
+        <section className="mb-10">
+          {currentUserId && currentUserId === deck.ownerId ? null : (
+            <>
+              <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+                Rate this deck
+              </h2>
+              <RatingWidget deckId={deck.id} />
+            </>
+          )}
+
+          <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+            Comments ({deck.comments.length})
+          </h2>
+
+          <CommentForm deckId={deck.id} />
+
+          <div className="space-y-4">
+            {deck.comments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                currentUserId={currentUserId}
+              />
+            ))}
+            {deck.comments.length === 0 && (
+              <p className="text-sm text-muted">Be the first to say something.</p>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

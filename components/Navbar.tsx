@@ -72,7 +72,7 @@ export default async function Navbar() {
             href="/create"
             className="text-sm bg-ink text-paper px-4 py-2 rounded-sm hover:bg-margin transition-colors focus-ring"
           >
-            Create deck
+            Create
           </Link>
         </div>
       </div>

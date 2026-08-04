@@ -37,6 +37,8 @@ export default function AddCardModal({
         back: editingCard.back,
         frontImage: editingCard.frontImage,
         backImage: editingCard.backImage,
+        frontImageWidth: editingCard.frontImageWidth,
+        backImageWidth: editingCard.backImageWidth,
         cardType: editingCard.cardType,
         choices: editingCard.choices,
       });
@@ -51,14 +53,19 @@ export default function AddCardModal({
   const isEditing = Boolean(editingCard);
 
   function isValid(): boolean {
-    if (!card.front.trim() || !card.back.trim()) return false;
-    if (card.cardType === "multiple_choice") {
-      const filled = card.choices.map((c) => c.trim()).filter(Boolean);
-      const unique = new Set(filled);
-      return filled.length === 4 && unique.size === 4 && filled.includes(card.back.trim());
-    }
+  const hasFront = Boolean(card.front.trim() || card.frontImage);
+  const hasBack = Boolean(card.back.trim() || card.backImage);
+  if (!hasFront || !hasBack) return false;
+
+  if (card.cardType === "multiple_choice") {
+    const filled = card.choices.map((c) => c.trim()).filter(Boolean);
+    const unique = new Set(filled);
+    if (filled.length !== 4 || unique.size !== 4) return false;
+    if (card.back.trim() && !filled.includes(card.back.trim())) return false;
     return true;
   }
+  return true;
+}
 
   function handleSaveAndClose() {
     if (!isValid()) return;
@@ -113,7 +120,7 @@ export default function AddCardModal({
                 Type
               </label>
               <div className="flex gap-2">
-                {(["flashcard", "multiple_choice"] as const).map((type) => (
+                {(["flashcard", "multiple_choice", "identification"] as const).map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -124,7 +131,7 @@ export default function AddCardModal({
                         : "bg-paper text-muted border-border hover:border-ink/50"
                     }`}
                   >
-                    {type === "flashcard" ? "Flashcard" : "Multiple Choice"}
+                    {type === "flashcard" ? "Flashcard" : type === "multiple_choice" ? "Multiple Choice" : "Type Answer"}
                   </button>
                 ))}
               </div>
@@ -163,7 +170,11 @@ export default function AddCardModal({
             <ImageUploadField
               label="Front"
               value={card.frontImage}
-              onChange={(url) => setCard((c) => ({ ...c, frontImage: url }))}
+              width={card.frontImageWidth}
+              onChange={(url) =>
+                setCard((c) => ({ ...c, frontImage: url, frontImageWidth: url ? c.frontImageWidth : null }))
+              }
+              onWidthChange={(w) => setCard((c) => ({ ...c, frontImageWidth: w }))}
             />
           </div>
 
@@ -180,7 +191,11 @@ export default function AddCardModal({
             <ImageUploadField
               label="Back"
               value={card.backImage}
-              onChange={(url) => setCard((c) => ({ ...c, backImage: url }))}
+              width={card.backImageWidth}
+              onChange={(url) =>
+                setCard((c) => ({ ...c, backImage: url, backImageWidth: url ? c.backImageWidth : null }))
+              }
+              onWidthChange={(w) => setCard((c) => ({ ...c, backImageWidth: w }))}
             />
           </div>
 

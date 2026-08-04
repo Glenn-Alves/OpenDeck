@@ -1,25 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { extractImageFromClipboard } from "@/lib/clipboardImage";
+import ResizableImage from "@/components/ResizableImage";
 
 export default function ImageUploadField({
   label,
   value,
+  width,
   onChange,
+  onWidthChange,
 }: {
   label: string;
   value: string | null;
+  width?: number | null;
   onChange: (url: string | null) => void;
+  onWidthChange?: (width: number) => void;
 }) {
   const supabase = createClient();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function uploadFile(file: File) {
     if (file.size > 5 * 1024 * 1024) {
       setError("Image must be under 5MB.");
       return;
@@ -36,7 +40,7 @@ export default function ImageUploadField({
       return;
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
+    const ext = file.name.split(".").pop() || "png";
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
@@ -52,17 +56,34 @@ export default function ImageUploadField({
     const { data } = supabase.storage.from("card-images").getPublicUrl(path);
     onChange(data.publicUrl);
     setUploading(false);
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
     e.target.value = "";
+  }
+
+  async function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const file = extractImageFromClipboard(e);
+    e.preventDefault(); // keep the textarea empty either way
+    if (!file) {
+      setError("No image found on clipboard.");
+      return;
+    }
+    await uploadFile(file);
   }
 
   return (
     <div className="mt-2">
       {value ? (
         <div className="relative inline-block">
-          <img
+          <ResizableImage
             src={value}
-            alt={label}
-            className="max-h-32 rounded-sm border border-border"
+            width={width ?? null}
+            editable={!!onWidthChange}
+            onResize={onWidthChange}
           />
           <button
             type="button"
@@ -74,16 +95,37 @@ export default function ImageUploadField({
           </button>
         </div>
       ) : (
-        <label className="inline-block text-xs text-rule hover:text-ink transition-colors focus-ring cursor-pointer">
-          {uploading ? "Uploading..." : `+ Add ${label.toLowerCase()} image`}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFile}
-            disabled={uploading}
-            className="hidden"
+        <div
+          onClick={() => textareaRef.current?.focus()}
+          className="relative inline-flex flex-col items-start gap-1 border border-dashed border-border rounded-sm px-3 py-2 focus-within:border-rule cursor-text"
+        >
+          <textarea
+            ref={textareaRef}
+            value=""
+            onChange={() => {}}
+            onPaste={handlePaste}
+            rows={1}
+            aria-hidden="true"
+            tabIndex={-1}
+            className="absolute inset-0 opacity-0 resize-none cursor-text"
           />
-        </label>
+          <label
+            onClick={(e) => e.stopPropagation()}
+            className="relative text-xs text-rule hover:text-ink transition-colors cursor-pointer"
+          >
+            {uploading ? "Uploading..." : `+ Add ${label.toLowerCase()} image`}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFile}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+          <span className="relative text-[10px] text-muted">
+            or click here and paste
+          </span>
+        </div>
       )}
       {error && <p className="text-xs text-margin mt-1">{error}</p>}
     </div>

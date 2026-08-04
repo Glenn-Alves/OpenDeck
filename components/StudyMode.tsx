@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { StudyCard } from "@/lib/getDeckForStudy";
-
+import ResizableImage from "@/components/ResizableImage";
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -29,6 +29,8 @@ export default function StudyMode({
   const [flipped, setFlipped] = useState(false);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string>("");
+  const [typedAnswer, setTypedAnswer] = useState("");
+  const [shuffledChoices, setShuffledChoices] = useState<string[]>([]);
 
   const CORRECT_MESSAGES = [
     "Correct!",
@@ -45,7 +47,20 @@ export default function StudyMode({
     "That's not it.",
     "Almost, but no.",
     "Not this time.",
+    "Wrong!",
   ];
+
+  const finished = queue.length === 0;
+  const current = !finished ? queue[0] : null;
+
+  useEffect(() => {
+    if (current && current.cardType === "multiple_choice" && current.choices) {
+      setShuffledChoices(shuffle(current.choices));
+    } else {
+      setShuffledChoices([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
 
   if (cards.length === 0) {
     return (
@@ -61,20 +76,6 @@ export default function StudyMode({
     );
   }
 
-  const finished = queue.length === 0;
-  const current = !finished ? queue[0] : null;
-
-  const [shuffledChoices, setShuffledChoices] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (current && current.cardType === "multiple_choice" && current.choices) {
-      setShuffledChoices(shuffle(current.choices));
-    } else {
-      setShuffledChoices([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.id]);
-
   function handleDifficulty(level: Difficulty) {
     const [current, ...rest] = queue;
 
@@ -89,13 +90,22 @@ export default function StudyMode({
     setFlipped(false);
     setSelectedChoice(null);
     setFeedbackMessage("");
+    setTypedAnswer("");
   }
 
   function handleChoiceSelect(choice: string) {
-    if (selectedChoice) return; // already answered, ignore further clicks
+    if (selectedChoice !== null || !current) return;
     setSelectedChoice(choice);
 
-    const isCorrect = current && choice === current.back;
+    const isCorrect = choice === current.back;
+    const pool = isCorrect ? CORRECT_MESSAGES : INCORRECT_MESSAGES;
+    setFeedbackMessage(pool[Math.floor(Math.random() * pool.length)]);
+  }
+
+  function handleTypedSubmit() {
+    if (selectedChoice !== null || !current) return;
+    const isCorrect = typedAnswer.trim().toLowerCase() === current.back.trim().toLowerCase();
+    setSelectedChoice(typedAnswer);
     const pool = isCorrect ? CORRECT_MESSAGES : INCORRECT_MESSAGES;
     setFeedbackMessage(pool[Math.floor(Math.random() * pool.length)]);
   }
@@ -111,6 +121,7 @@ export default function StudyMode({
     setFlipped(false);
     setSelectedChoice(null);
     setFeedbackMessage("");
+    setTypedAnswer("");
   }
 
   if (finished) {
@@ -168,7 +179,7 @@ export default function StudyMode({
         <div>
           <div className="bg-card border-2 border-border rounded-lg shadow-sm p-10 flex flex-col items-center justify-center gap-4 min-h-[200px] mb-6">
             {current.frontImage && (
-              <img src={current.frontImage} alt="Question" className="max-h-40 rounded-sm" />
+              <ResizableImage src={current.frontImage} alt="Question" className="max-h-40" />
             )}
             <p className="text-xl text-ink font-medium text-center leading-relaxed">
               {current.front}
@@ -176,7 +187,7 @@ export default function StudyMode({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-           {shuffledChoices.map((choice, index) => {
+            {shuffledChoices.map((choice, index) => {
               const isSelected = selectedChoice === choice;
               const isCorrectChoice = choice === current.back;
               const showResult = selectedChoice !== null;
@@ -188,7 +199,7 @@ export default function StudyMode({
                 stateClasses = "border-margin bg-margin/10 text-margin";
               }
 
-             return (
+              return (
                 <button
                   key={`${current.id}-${index}`}
                   onClick={() => handleChoiceSelect(choice)}
@@ -217,6 +228,68 @@ export default function StudyMode({
             </div>
           )}
         </div>
+      ) : current.cardType === "identification" ? (
+        <div>
+          <div className="bg-card border-2 border-border rounded-lg shadow-sm p-10 flex flex-col items-center justify-center gap-4 min-h-[200px] mb-6">
+            {current.frontImage && (
+              <ResizableImage src={current.frontImage} alt="Question" className="max-h-40" />
+            )}
+            <p className="text-xl text-ink font-medium text-center leading-relaxed">
+              {current.front}
+            </p>
+          </div>
+
+          {selectedChoice === null ? (
+            <div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleTypedSubmit();
+                }}
+                className="flex gap-2 mb-3"
+              >
+                <input
+                  type="text"
+                  autoFocus
+                  value={typedAnswer}
+                  onChange={(e) => setTypedAnswer(e.target.value)}
+                  placeholder="Type your answer..."
+                  className="flex-1 bg-card border-2 border-border rounded-sm px-4 py-2.5 text-sm text-ink placeholder:text-muted focus-ring"
+                />
+                <button
+                  type="submit"
+                  disabled={!typedAnswer.trim()}
+                  className="bg-ink text-paper px-5 py-2.5 rounded-sm text-sm font-medium hover:bg-margin transition-colors focus-ring disabled:opacity-50"
+                >
+                  Submit
+                </button>
+              </form>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => handleDifficulty("answered")}
+                  className="text-xs text-muted hover:text-ink transition-colors focus-ring"
+                >
+                  Skip, answer later
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className={`text-sm font-medium mb-3 ${typedAnswer.trim().toLowerCase() === current.back.trim().toLowerCase() ? "text-green-700" : "text-margin"}`}>
+                {typedAnswer.trim().toLowerCase() === current.back.trim().toLowerCase()
+                  ? feedbackMessage
+                  : `${feedbackMessage} The answer was "${current.back}".`}
+              </p>
+              <button
+                onClick={() => handleDifficulty(typedAnswer.trim().toLowerCase() === current.back.trim().toLowerCase() ? "easy" : "try")}
+                className="bg-ink text-paper px-5 py-2.5 rounded-sm text-sm font-medium hover:bg-margin transition-colors focus-ring"
+              >
+                Continue
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           {/* Flip card */}
@@ -230,7 +303,7 @@ export default function StudyMode({
             >
               <div className="absolute inset-0 bg-card border-2 border-ink rounded-lg shadow-sm p-10 flex flex-col items-center justify-center gap-4 overflow-y-auto [backface-visibility:hidden]">
                 {current.frontImage && (
-                  <img src={current.frontImage} alt="Front" className="max-h-40 rounded-sm" />
+                  <ResizableImage src={current.frontImage} alt="Front" className="max-h-40" />
                 )}
                 <p className="text-xl text-ink font-medium text-center leading-relaxed">{current.front}</p>
               </div>
@@ -239,7 +312,7 @@ export default function StudyMode({
                 style={{ transform: "rotateY(180deg)" }}
               >
                 {current.backImage && (
-                  <img src={current.backImage} alt="Back" className="max-h-40 rounded-sm" />
+                  <ResizableImage src={current.backImage} alt="Back" className="max-h-40" />
                 )}
                 <p className="text-xl text-muted text-center leading-relaxed">{current.back}</p>
               </div>

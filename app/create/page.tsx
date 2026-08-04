@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AnkiImportGuide from "@/components/AnkiImportGuide";
 import AddCardModal, { type CardWithLocation, type LocationOption } from "@/components/AddCardModal";
+import { isValidCard } from "@/components/CardEditorFields";
 import SubsectionBuilder, {
   emptySubsectionNode,
   buildLocationPaths,
@@ -83,6 +84,8 @@ export default function CreateDeckPage() {
               back: c.back,
               frontImage: c.frontImage ?? null,
               backImage: c.backImage ?? null,
+              frontImageWidth: null,
+              backImageWidth: null,
               cardType: "flashcard" as const,
               choices: ["", "", "", ""],
             })
@@ -149,16 +152,6 @@ export default function CreateDeckPage() {
     setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
-  function isValidCard(c: CardWithLocation): boolean {
-    if (!c.front.trim() || !c.back.trim()) return false;
-    if (c.cardType === "multiple_choice") {
-      const filled = c.choices.map((ch) => ch.trim()).filter(Boolean);
-      const unique = new Set(filled);
-      return filled.length === 4 && unique.size === 4 && filled.includes(c.back.trim());
-    }
-    return true;
-  }
-
   async function insertSubsectionTree(
     nodes: SubsectionNode[],
     parentDeckId: string,
@@ -204,7 +197,7 @@ export default function CreateDeckPage() {
     const validCards = cards.filter(isValidCard);
     if (validCards.length === 0) {
       setError(
-        "Add at least one valid card. Multiple choice cards need all 4 choices filled, with one exactly matching the correct answer."
+        "Add at least one valid card. Every card needs text or an image on both sides. Multiple choice cards need all 4 choices filled, with one exactly matching the correct answer (if it has text)."
       );
       return;
     }
@@ -250,6 +243,8 @@ export default function CreateDeckPage() {
         back_text: c.back.trim(),
         front_image_url: c.frontImage,
         back_image_url: c.backImage,
+        front_image_width: c.frontImageWidth,
+        back_image_width: c.backImageWidth,
         card_type: c.cardType,
         choices: c.cardType === "multiple_choice" ? c.choices.map((ch) => ch.trim()) : null,
       }))
@@ -432,7 +427,7 @@ export default function CreateDeckPage() {
                       {c.cardType === "flashcard" ? "Card" : "MCQ"}
                     </span>
                     <span className="text-sm text-ink truncate flex-1">
-                      {c.front.trim() || "(empty)"}
+                      {c.front.trim() || (c.frontImage ? "(image)" : "(empty)")}
                     </span>
                     <span className="text-[11px] text-muted shrink-0 hidden sm:inline">
                       {locationLabel(c.locationId)}

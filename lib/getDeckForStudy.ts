@@ -6,7 +6,7 @@ export type StudyCard = {
   back: string;
   frontImage: string | null;
   backImage: string | null;
-  cardType: "flashcard" | "multiple_choice";
+  cardType: "flashcard" | "multiple_choice" | "identification";
   choices: string[] | null;
 };
 export async function getDeckForStudy(

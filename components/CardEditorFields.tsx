@@ -8,7 +8,9 @@ export type CardInput = {
   back: string;
   frontImage: string | null;
   backImage: string | null;
-  cardType: "flashcard" | "multiple_choice";
+  frontImageWidth: number | null;
+  backImageWidth: number | null;
+  cardType: "flashcard" | "multiple_choice" | "identification";
   choices: string[];
 };
 
@@ -18,6 +20,8 @@ export function emptyCard(): CardInput {
     back: "",
     frontImage: null,
     backImage: null,
+    frontImageWidth: null,
+    backImageWidth: null,
     cardType: "flashcard",
     choices: ["", "", "", ""],
   };
@@ -39,7 +43,15 @@ export default function CardEditorFields({
   }
 
   function updateImage(field: "frontImage" | "backImage", url: string | null) {
-    onChange({ ...card, [field]: url });
+    if (field === "frontImage") {
+      onChange({ ...card, frontImage: url, frontImageWidth: url ? card.frontImageWidth : null });
+    } else {
+      onChange({ ...card, backImage: url, backImageWidth: url ? card.backImageWidth : null });
+    }
+  }
+
+  function updateImageWidth(field: "frontImageWidth" | "backImageWidth", width: number) {
+    onChange({ ...card, [field]: width });
   }
 
   function updateType(type: CardInput["cardType"]) {
@@ -56,7 +68,7 @@ export default function CardEditorFields({
   return (
     <div className="bg-card border border-border rounded-sm p-4 relative">
       <div className="flex gap-2 mb-3">
-        {(["flashcard", "multiple_choice"] as const).map((type) => (
+        {(["flashcard", "multiple_choice", "identification"] as const).map((type) => (
           <button
             key={type}
             type="button"
@@ -67,7 +79,7 @@ export default function CardEditorFields({
                 : "bg-card text-muted border-border hover:border-ink/50"
             }`}
           >
-            {type === "flashcard" ? "Flashcard" : "Multiple Choice"}
+            {type === "flashcard" ? "Flashcard" : type === "multiple_choice" ? "Multiple Choice" : "Type Answer"}
           </button>
         ))}
       </div>
@@ -84,7 +96,9 @@ export default function CardEditorFields({
           <ImageUploadField
             label="Front"
             value={card.frontImage}
+            width={card.frontImageWidth}
             onChange={(url) => updateImage("frontImage", url)}
+            onWidthChange={(w) => updateImageWidth("frontImageWidth", w)}
           />
         </div>
         <div>
@@ -98,7 +112,9 @@ export default function CardEditorFields({
           <ImageUploadField
             label="Back"
             value={card.backImage}
+            width={card.backImageWidth}
             onChange={(url) => updateImage("backImage", url)}
+            onWidthChange={(w) => updateImageWidth("backImageWidth", w)}
           />
         </div>
       </div>
@@ -138,11 +154,19 @@ export default function CardEditorFields({
 }
 
 export function isValidCard(c: CardInput): boolean {
-  if (!c.front.trim() || !c.back.trim()) return false;
+  const hasFront = Boolean(c.front.trim() || c.frontImage);
+  const hasBack = Boolean(c.back.trim() || c.backImage);
+  if (!hasFront || !hasBack) return false;
+
   if (c.cardType === "multiple_choice") {
     const filled = c.choices.map((ch) => ch.trim()).filter(Boolean);
     const unique = new Set(filled);
-    return filled.length === 4 && unique.size === 4 && filled.includes(c.back.trim());
+    if (filled.length !== 4 || unique.size !== 4) return false;
+    // Back text must match a choice, but only when there IS back text.
+    // An image-only back skips this check (there's nothing to match).
+    if (c.back.trim() && !filled.includes(c.back.trim())) return false;
+    return true;
   }
+
   return true;
 }
