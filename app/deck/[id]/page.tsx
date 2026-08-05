@@ -134,7 +134,7 @@ export default async function DeckDetailPage({
 
   return (
     <div className="pt-12">
-      <MarkDeckViewed tags={deck.tags} />
+      <MarkDeckViewed deckId={deck.id} tags={deck.tags} />
       {/* Header */}
       <div className="pb-8 mb-8">
         <Breadcrumbs items={[...ancestors, { id: deck.id, title: deck.title }]} />

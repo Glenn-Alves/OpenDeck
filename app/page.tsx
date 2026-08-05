@@ -6,6 +6,7 @@ import FeaturedCreators from "@/components/FeaturedCreators";
 
 import { getDiscoverySections } from "@/lib/getDiscoverySections";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createClient } from "@/lib/supabase/server";
 
 async function getRealDecks(): Promise<DeckSummary[]> {
     const supabase = createPublicClient();
@@ -47,6 +48,30 @@ return data.map((row: any) => {
     });
 }
 
+type RecentlyVisitedDeck = { id: string; title: string; cardCount: number };
+
+async function getRecentlyVisitedDecks(userId: string): Promise<RecentlyVisitedDeck[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("deck_views")
+    .select("viewed_at, decks(id, title, cards(count))")
+    .eq("user_id", userId)
+    .order("viewed_at", { ascending: false })
+    .limit(6);
+
+  if (error || !data) return [];
+
+  return data
+    .map((row: any) => row.decks)
+    .filter((deck: any) => Boolean(deck))
+    .map((deck: any) => ({
+      id: deck.id,
+      title: deck.title,
+      cardCount: deck.cards?.[0]?.count ?? 0,
+    }));
+}
+
 export default async function BrowsePage({
   searchParams,
 }: {
@@ -64,6 +89,12 @@ export default async function BrowsePage({
   } catch {
     recentDeckTags = [];
   }
+
+  const supabase = await createClient();
+  const { data: userData } = await supabase.auth.getUser();
+  const currentUserId = userData.user?.id ?? null;
+
+  const recentlyVisited = currentUserId ? await getRecentlyVisitedDecks(currentUserId) : [];
 
   const allDecks = await getRealDecks();
   const allTagsSet = new Set(allDecks.flatMap((d) => d.tags));
@@ -103,7 +134,7 @@ export default async function BrowsePage({
       {/* Hero */}
       <section className="pt-16 pb-10 border-b border-border mb-10">
         <p className="font-display text-xs text-margin uppercase tracking-widest mb-3">
-          a box of decks, open to everyone
+          An open source of decks, made by everyone!
         </p>
         <h1 className="font-display font-bold text-ink text-3xl md:text-4xl leading-tight max-w-2xl mb-5">
           Find a flashcard deck someone already made for the thing you're studying.
@@ -130,6 +161,31 @@ export default async function BrowsePage({
           </button>
         </form>
       </section>
+
+      {/* Recently visited - logged-in users only, same layout on every screen size */}
+      {recentlyVisited.length > 0 && (
+        <section className="mb-10">
+          <h2 className="font-display font-bold text-ink text-sm uppercase tracking-wide mb-4">
+            Recently Visited
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+            {recentlyVisited.map((deck) => (
+              <Link
+                key={deck.id}
+                href={`/deck/${deck.id}`}
+                className="min-w-[160px] flex-shrink-0 bg-card border border-border rounded-sm px-4 py-3 hover:border-ink transition-colors focus-ring block"
+              >
+                <p className="font-display font-bold text-ink text-sm truncate">
+                  {deck.title}
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  {deck.cardCount} card{deck.cardCount !== 1 ? "s" : ""}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Tag filter row - only the last-viewed deck's own tags */}
       {visibleTags.length > 0 && (
