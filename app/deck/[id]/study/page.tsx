@@ -1,5 +1,5 @@
 import { getDeckForStudy } from "@/lib/getDeckForStudy";
-import StudyMode from "@/components/StudyMode";
+import StudySession from "@/components/StudySession";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 
@@ -23,5 +23,5 @@ export default async function StudyPage({
     }
   }
 
-  return <StudyMode deckId={params.id} title={deck.title} cards={deck.cards} />;
+  return <StudySession deckId={params.id} title={deck.title} cards={deck.cards} />;
 }
