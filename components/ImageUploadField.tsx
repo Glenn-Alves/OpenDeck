@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { extractImageFromClipboard } from "@/lib/clipboardImage";
+import { compressImage } from "@/lib/compressImage";
 import ResizableImage from "@/components/ResizableImage";
 
 export default function ImageUploadField({
@@ -23,14 +24,17 @@ export default function ImageUploadField({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function uploadFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be under 5MB.");
-      return;
-    }
-
+  async function uploadFile(rawFile: File) {
     setUploading(true);
     setError(null);
+
+    const file = await compressImage(rawFile);
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploading(false);
+      setError("Image must be under 5MB, even after compression.");
+      return;
+    }
 
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
@@ -40,7 +44,7 @@ export default function ImageUploadField({
       return;
     }
 
-    const ext = file.name.split(".").pop() || "png";
+    const ext = file.name.split(".").pop() || "jpg";
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
@@ -123,7 +127,7 @@ export default function ImageUploadField({
             />
           </label>
           <span className="relative text-[10px] text-muted">
-            or click here and paste
+            or click here and paste (Ctrl+V)
           </span>
         </div>
       )}
