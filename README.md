@@ -1,4 +1,6 @@
-# OpenDeck
+# OpenDeck 
+
+NOTE: Currently postponed! I don't see any market for it. 
 
 OpenDeck is a place to find and share flashcard decks with other people.
 
