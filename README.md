@@ -38,4 +38,4 @@ deck, you can publish it so others studying the same thing can find it too.
 - **Supabase**: Postgres database, authentication, file storage (card
   images), and realtime (live visitor count)
 - **Tailwind CSS**, with a light/dark mode toggle
-- **Vercel** for hosting, auto-deploys on push to `main`
+
